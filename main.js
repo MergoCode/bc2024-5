@@ -84,3 +84,19 @@ app.get('/notes', (req, res) => {
     res.status(200).send(notes); 
 })
 
+app.put("/notes/:name", (req, res) => {
+    const newText = req.body.text;
+    const name = req.body.name;
+
+    const note = notes.find(note => note.name === name);
+    try {
+        note.text = newText;
+        res.status(201).send(`Note ${name} updated succesfully!`)
+    } catch (error) {
+        console.log(`error while updating note ${name}:`, error);
+        res.status(404).send(`Note ${name} not found!`);
+    }
+
+
+})
+

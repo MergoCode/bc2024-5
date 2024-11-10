@@ -75,6 +75,12 @@ app.post('/notes/write', (req, res) => {
     };
 
     notes.push(newNote);
+    console.log(notes);
+
     return res.status(201).send(newNote);
 });
+console.log(notes);
+app.get('/notes', (req, res) => {
+    res.status(200).send(notes); 
+})
 

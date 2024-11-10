@@ -111,3 +111,17 @@ app.put("/notes/:name", (req, res) => {
     saveNotesToFile(); 
     res.status(201).send(`Note ${name} updated successfully!`);
 });
+
+app.delete('/delete/:name', (req, res) => {
+    const name = req.params.name;
+
+    const note = notes.find(note => note.name === name);
+    try {
+        notes.splice(note, 1);
+        saveNotesToFile();
+        res.send(`Note ${note.name} deleted succesfully!`);
+    } catch (err) {
+        console.log(`Error deleting note ${note.name}: `, err);
+        res.status(404).send("Note not found!");
+    }
+});

@@ -33,4 +33,22 @@ const server = app.listen(options.port, options.host, () => {
 server.on('error', (err) => {
     console.error("server error: ", err);
 }) 
+let notes = [];
+const newNote = {
+    name: "notatka",
+    text: "lol"
+}
+notes.push(newNote);
+app.get(`/notes/:name`, (req, res) => {
+    const name = req.params.name;
+
+    const note = notes.find(note => note.name === name);
+
+    if (!note) {
+        console.log(`Note not found: ${name}`);
+        res.status(404).send("Note not found!");
+    }
+    
+    res.send(note.text);
+});
 

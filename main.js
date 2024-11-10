@@ -125,3 +125,8 @@ app.delete('/delete/:name', (req, res) => {
         res.status(404).send("Note not found!");
     }
 });
+
+app.get("/UploadForm.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "UploadForm.html"));
+
+})

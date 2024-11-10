@@ -2,14 +2,14 @@ const express = require("express");
 const { Command } = require('commander');
 const path = require('path');
 const fs = require('fs');
-const exp = require("constants");
- 
+const multer = require('multer');
+
 const program = new Command();
 
 program
     .requiredOption('-h, --host <host>', 'Server Address')
     .requiredOption('-p, --port <port>', 'Server Port')
-    .requiredOption('-c, --cache <cache>', 'Cache directory path')
+    .requiredOption('-c, --cache <cache>', 'Cache directory path');
 
 program.parse(process.argv);
 
@@ -21,26 +21,38 @@ if (!fs.existsSync(cacheDirectory)) {
     process.exit(1);
 }
 
+const notesFilePath = path.join(cacheDirectory, 'notes.json');
+
+function saveNotesToFile() {
+    fs.writeFileSync(notesFilePath, JSON.stringify(notes, null, 2));
+}
+
+function loadNotesFromFile() {
+    if (fs.existsSync(notesFilePath)) {
+        const data = fs.readFileSync(notesFilePath);
+        return JSON.parse(data);
+    }
+    return [];
+}
+
+let notes = loadNotesFromFile();
+
 const app = express();
 app.use(express.json());
+const upload = multer();
 
-app.get('/',(req, res) => {
+app.get('/', (req, res) => {
     res.send("Hello world!");
 });
 
 const server = app.listen(options.port, options.host, () => {
     console.log(`Server started at http://${options.host}:${options.port}`);
-})
+});
 
 server.on('error', (err) => {
     console.error("server error: ", err);
-}) 
-let notes = [];
-const newNote = {
-    name: "notatka",
-    text: "lol"
-}
-notes.push(newNote);
+});
+
 app.get(`/notes/:name`, (req, res) => {
     const name = req.params.name;
 
@@ -48,14 +60,15 @@ app.get(`/notes/:name`, (req, res) => {
 
     if (!note) {
         console.log(`Note not found: ${name}`);
-        res.status(404).send("Note not found!");
+        return res.status(404).send("Note not found!");
     }
     
     res.send(note.text);
 });
 
-app.post('/notes/write', (req, res) => {
-    const { name } = req.body; 
+app.post('/notes/write', upload.fields([{ name: 'note_name' }, { name: 'note' }]), (req, res) => {
+    const name = req.body.note_name;
+    const text = req.body.note;
 
     if (!name) {
         return res.status(400).send("Name parameter is required.");
@@ -63,40 +76,38 @@ app.post('/notes/write', (req, res) => {
 
     console.log(`Received request to create note with name: ${name}`);
 
-    const note = notes.find(note => note.name === name);
+    const existingNote = notes.find(note => note.name === name);
 
-    if (note) {
-        return res.status(409).send("Note already exists!");
+    if (existingNote) {
+        return res.status(400).send("Note already exists!");
     }
 
     const newNote = {
         name: name,
-        text: req.body.text || "No text provided" 
+        text: text || "No text provided"
     };
 
     notes.push(newNote);
+    saveNotesToFile(); 
     console.log(notes);
 
     return res.status(201).send(newNote);
 });
-console.log(notes);
+
 app.get('/notes', (req, res) => {
-    res.status(200).send(notes); 
-})
+    res.status(200).send(notes);
+});
 
 app.put("/notes/:name", (req, res) => {
     const newText = req.body.text;
-    const name = req.body.name;
+    const name = req.params.name; 
 
     const note = notes.find(note => note.name === name);
-    try {
-        note.text = newText;
-        res.status(201).send(`Note ${name} updated succesfully!`)
-    } catch (error) {
-        console.log(`error while updating note ${name}:`, error);
-        res.status(404).send(`Note ${name} not found!`);
+    if (!note) {
+        return res.status(404).send(`Note ${name} not found!`);
     }
 
-
-})
-
+    note.text = newText;
+    saveNotesToFile(); 
+    res.status(201).send(`Note ${name} updated successfully!`);
+});
